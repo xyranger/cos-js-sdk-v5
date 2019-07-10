@@ -6211,7 +6211,7 @@ function _submitRequest(params, callback) {
 
         // 请求错误，发生网络错误
         if (err) {
-            cb({ error: err });
+            cb({ error: err, errorType: 'network' });
             return;
         }
 
@@ -6226,7 +6226,7 @@ function _submitRequest(params, callback) {
         var statusCode = response.statusCode;
         var statusSuccess = Math.floor(statusCode / 100) === 2; // 200 202 204 206
         if (!statusSuccess) {
-            cb({ error: jsonRes.Error || jsonRes });
+            cb({ error: jsonRes.Error || jsonRes, errorType: 'response', statusCode: statusCode });
             return;
         }
 
@@ -10690,6 +10690,16 @@ var Async = __webpack_require__(18);
 var EventProxy = __webpack_require__(2).EventProxy;
 var util = __webpack_require__(0);
 
+// 重试器
+var CosRetry = {};
+
+(function () {
+    var methods = ['multipartComplete', 'headObject', 'multipartInit', 'putObjectCopy', 'putObject'];
+    util.each(methods, function (method) {
+        CosRetry[method] = Async.retryRequestWrapper(method);
+    });
+})();
+
 // 文件分块上传全过程，暴露的分块上传接口
 function sliceUploadFile(params, callback) {
     var self = this;
@@ -10832,7 +10842,7 @@ function sliceUploadFile(params, callback) {
         params.Body = '';
         params.ContentLength = 0;
         params.SkipTask = true;
-        self.putObject(params, function (err, data) {
+        CosRetry.putObject.call(self, params, function (err, data) {
             if (err) {
                 return callback(err);
             }
@@ -11042,7 +11052,7 @@ function getUploadIdAndPartList(params, callback) {
         if (ContentType) {
             _params.Headers['Content-Type'] = ContentType;
         }
-        self.multipartInit(_params, function (err, data) {
+        CosRetry.multipartInit.call(self, _params, function (err, data) {
             if (!self._isRunningTask(TaskId)) return;
             if (err) return ep.emit('error', err);
             var UploadId = data.UploadId;
@@ -11348,7 +11358,7 @@ function uploadSliceItem(params, callback) {
     }
 
     var PartItem = UploadData.PartList[PartNumber - 1];
-    Async.retry(ChunkRetryTimes, function (tryCallback) {
+    Async.retryRequest(ChunkRetryTimes, function (tryCallback) {
         if (!self._isRunningTask(TaskId)) return;
         util.fileSlice(FileBody, start, end, true, function (Body) {
             self.multipartUpload({
@@ -11394,7 +11404,7 @@ function uploadSliceComplete(params, callback) {
         };
     });
     // 完成上传的请求也做重试
-    Async.retry(ChunkRetryTimes, function (tryCallback) {
+    Async.retryRequest(ChunkRetryTimes, function (tryCallback) {
         self.multipartComplete({
             Bucket: Bucket,
             Region: Region,
@@ -11665,7 +11675,7 @@ function sliceCopyFile(params, callback) {
 
     // 分片复制完成，开始 multipartComplete 操作
     ep.on('copy_slice_complete', function (UploadData) {
-        self.multipartComplete({
+        CosRetry.multipartComplete.call(self, {
             Bucket: Bucket,
             Region: Region,
             Key: Key,
@@ -11757,7 +11767,7 @@ function sliceCopyFile(params, callback) {
         }
         TargetHeader['x-cos-storage-class'] = params.Headers['x-cos-storage-class'] || SourceHeaders['x-cos-storage-class'];
         TargetHeader = util.clearKey(TargetHeader);
-        self.multipartInit({
+        CosRetry.multipartInit.call(self, {
             Bucket: Bucket,
             Region: Region,
             Key: Key,
@@ -11772,7 +11782,7 @@ function sliceCopyFile(params, callback) {
     });
 
     // 获取远端复制源文件的大小
-    self.headObject({
+    CosRetry.headObject.call(self, {
         Bucket: SourceBucket,
         Region: SourceRegion,
         Key: SourceKey
@@ -11799,7 +11809,7 @@ function sliceCopyFile(params, callback) {
             if (!params.Headers['x-cos-metadata-directive']) {
                 params.Headers['x-cos-metadata-directive'] = 'Copy';
             }
-            self.putObjectCopy(params, function (err, data) {
+            CosRetry.putObjectCopy.call(self, params, function (err, data) {
                 if (err) {
                     onProgress(null, true);
                     return callback(err);
@@ -11842,7 +11852,7 @@ function copySliceItem(params, callback) {
     var ChunkRetryTimes = this.options.ChunkRetryTimes + 1;
     var self = this;
 
-    Async.retry(ChunkRetryTimes, function (tryCallback) {
+    Async.retryRequest(ChunkRetryTimes, function (tryCallback) {
         self.uploadPartCopy({
             TaskId: TaskId,
             Bucket: Bucket,
@@ -11933,9 +11943,52 @@ var retry = function (times, iterator, callback) {
     }
 };
 
+// 重试请求，只针对 网络错误 和 5XX请求 进行重试
+var retryRequest = function (times, iterator, callback) {
+    var next = function (index) {
+        iterator(function (err, data) {
+            if (err && index < times) {
+
+                var errorType = err.errorType,
+                    statusCode = err.statusCode + '';
+
+                if (errorType === 'network' || errorType === 'response' && statusCode.indexOf('5') === 0) {
+                    next(index + 1);
+                } else {
+                    callback(err);
+                }
+            } else {
+                callback(err, data);
+            }
+        });
+    };
+    if (times < 1) {
+        callback();
+    } else {
+        next(1);
+    }
+};
+
+// 用于包裹
+var retryRequestWrapper = function (method) {
+    return function (params, callback) {
+        var self = this,
+            ChunkRetryTimes = this.options.ChunkRetryTimes + 1;
+        retryRequest(ChunkRetryTimes, function (tryCallback) {
+            if (params.TaskId && self._isRunningTask && !self._isRunningTask(params.TaskId)) {
+                // 上传任务被 abort，不继续重试
+            } else {
+                self[method].call(self, params, tryCallback);
+            }
+        }, callback);
+    };
+};
+
 var async = {
     eachLimit: eachLimit,
-    retry: retry
+    retry: retry,
+    retryRequest: retryRequest,
+    retryRequestWrapper: retryRequestWrapper
 };
 
 module.exports = async;

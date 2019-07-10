@@ -9,21 +9,14 @@ var config = {
     secretKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
     proxy: '',
     durationSeconds: 1800,
-    bucket: 'test-1250000000',
+    bucket: '3399demo-1252375642',
     region: 'ap-guangzhou',
-    allowPrefix: '_ALLOW_DIR_/*',
+    allowPrefix: '*',
     // 密钥的权限列表
     allowActions: [
         // 所有 action 请看文档 https://cloud.tencent.com/document/product/436/31923
         // 简单上传
-        'name/cos:PutObject',
-        'name/cos:PostObject',
-        // 分片上传
-        'name/cos:InitiateMultipartUpload',
-        'name/cos:ListMultipartUploads',
-        'name/cos:ListParts',
-        'name/cos:UploadPart',
-        'name/cos:CompleteMultipartUpload'
+        '*'
     ],
 };
 

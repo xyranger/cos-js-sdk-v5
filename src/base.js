@@ -2321,7 +2321,7 @@ function _submitRequest(params, callback) {
 
         // 请求错误，发生网络错误
         if (err) {
-            cb({error: err});
+            cb({error: err, errorType: 'network'});
             return;
         }
 
@@ -2336,7 +2336,7 @@ function _submitRequest(params, callback) {
         var statusCode = response.statusCode;
         var statusSuccess = Math.floor(statusCode / 100) === 2; // 200 202 204 206
         if (!statusSuccess) {
-            cb({error: jsonRes.Error || jsonRes});
+            cb({error: jsonRes.Error || jsonRes, errorType: 'response', statusCode: statusCode});
             return;
         }
 

@@ -2,6 +2,16 @@ var Async = require('./async');
 var EventProxy = require('./event').EventProxy;
 var util = require('./util');
 
+// 重试器
+var CosRetry = {};
+
+(function() {
+    var methods = ['multipartComplete', 'headObject', 'multipartInit', 'putObjectCopy', 'putObject'];
+    util.each(methods, function(method) {
+        CosRetry[method] = Async.retryRequestWrapper(method);
+    });
+})();
+
 // 文件分块上传全过程，暴露的分块上传接口
 function sliceUploadFile(params, callback) {
     var self = this;
@@ -144,7 +154,7 @@ function sliceUploadFile(params, callback) {
         params.Body = '';
         params.ContentLength = 0;
         params.SkipTask = true;
-        self.putObject(params, function (err, data) {
+        CosRetry.putObject.call(self, params, function (err, data) {
             if (err) {
                 return callback(err);
             }
@@ -356,7 +366,7 @@ function getUploadIdAndPartList(params, callback) {
         if (ContentType) {
             _params.Headers['Content-Type'] = ContentType;
         }
-        self.multipartInit(_params, function (err, data) {
+        CosRetry.multipartInit.call(self, _params, function (err, data) {
             if (!self._isRunningTask(TaskId)) return;
             if (err) return ep.emit('error', err);
             var UploadId = data.UploadId;
@@ -659,7 +669,7 @@ function uploadSliceItem(params, callback) {
     }
 
     var PartItem = UploadData.PartList[PartNumber - 1];
-    Async.retry(ChunkRetryTimes, function (tryCallback) {
+    Async.retryRequest(ChunkRetryTimes, function (tryCallback) {
         if (!self._isRunningTask(TaskId)) return;
         util.fileSlice(FileBody, start, end, true, function (Body) {
             self.multipartUpload({
@@ -706,7 +716,7 @@ function uploadSliceComplete(params, callback) {
         };
     });
     // 完成上传的请求也做重试
-    Async.retry(ChunkRetryTimes, function (tryCallback) {
+    Async.retryRequest(ChunkRetryTimes, function (tryCallback) {
         self.multipartComplete({
             Bucket: Bucket,
             Region: Region,
@@ -978,13 +988,13 @@ function sliceCopyFile(params, callback) {
 
     // 分片复制完成，开始 multipartComplete 操作
     ep.on('copy_slice_complete', function (UploadData) {
-        self.multipartComplete({
+        CosRetry.multipartComplete.call(self, {
             Bucket: Bucket,
             Region: Region,
             Key: Key,
             UploadId: UploadData.UploadId,
             Parts: UploadData.PartList,
-        },function (err, data) {
+        }, function (err, data) {
             if (err) {
                 onProgress(null, true);
                 return callback(err);
@@ -1070,7 +1080,7 @@ function sliceCopyFile(params, callback) {
         }
         TargetHeader['x-cos-storage-class'] = params.Headers['x-cos-storage-class'] || SourceHeaders['x-cos-storage-class'];
         TargetHeader = util.clearKey(TargetHeader);
-        self.multipartInit({
+        CosRetry.multipartInit.call(self, {
             Bucket: Bucket,
             Region: Region,
             Key: Key,
@@ -1085,7 +1095,7 @@ function sliceCopyFile(params, callback) {
     });
 
     // 获取远端复制源文件的大小
-    self.headObject({
+    CosRetry.headObject.call(self, {
         Bucket: SourceBucket,
         Region: SourceRegion,
         Key: SourceKey,
@@ -1112,7 +1122,7 @@ function sliceCopyFile(params, callback) {
             if (!params.Headers['x-cos-metadata-directive']) {
                 params.Headers['x-cos-metadata-directive'] = 'Copy';
             }
-            self.putObjectCopy(params, function (err, data) {
+            CosRetry.putObjectCopy.call(self, params, function (err, data) {
                 if (err) {
                     onProgress(null, true);
                     return callback(err);
@@ -1155,7 +1165,7 @@ function copySliceItem(params, callback) {
     var ChunkRetryTimes = this.options.ChunkRetryTimes + 1;
     var self = this;
 
-    Async.retry(ChunkRetryTimes, function (tryCallback) {
+    Async.retryRequest(ChunkRetryTimes, function (tryCallback) {
         self.uploadPartCopy({
             TaskId: TaskId,
             Bucket: Bucket,
@@ -1173,6 +1183,8 @@ function copySliceItem(params, callback) {
         return callback(err, data);
     });
 }
+
+
 
 
 var API_MAP = {
