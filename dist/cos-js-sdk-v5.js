@@ -6106,7 +6106,7 @@ function submitRequest(params, callback) {
             }
             params.AuthData = AuthData;
             _submitRequest.call(self, params, function (err, data) {
-                if (err && tryIndex < 2 && (oldClockOffset !== self.options.SystemClockOffset || allowRetry.call(self, err))) {
+                if (err && tryIndex < 1 && (oldClockOffset !== self.options.SystemClockOffset || allowRetry.call(self, err))) {
                     if (params.headers) {
                         delete params.headers.Authorization;
                         delete params.headers['token'];
@@ -6211,7 +6211,13 @@ function _submitRequest(params, callback) {
 
         // 请求错误，发生网络错误
         if (err) {
-            cb({ error: err, errorType: 'network' });
+            if (err === 'timeout') {
+                cb({ error: err, errorType: 'timeout' }); // 超时重试
+            } else if (err === 'error') {
+                cb({ error: err, errorType: 'cors' }); // 可能由于跨域导致
+            } else {
+                cb({ error: err, errorType: 'unknown' }); // 未知错误
+            }
             return;
         }
 
@@ -11950,9 +11956,9 @@ var retryRequest = function (times, iterator, callback) {
             if (err && index < times) {
 
                 var errorType = err.errorType,
-                    statusCode = err.statusCode + '';
+                    statusCode = err.statusCode;
 
-                if (errorType === 'network' || errorType === 'response' && statusCode.indexOf('5') === 0) {
+                if (errorType === 'timeout' || errorType === 'response' && Math.round(statusCode / 100) === 5) {
                     next(index + 1);
                 } else {
                     callback(err);

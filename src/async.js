@@ -59,9 +59,9 @@ var retryRequest = function (times, iterator, callback) {
             if (err && index < times) {
 
                 var errorType = err.errorType, 
-                    statusCode = err.statusCode + '';
+                    statusCode = err.statusCode;
 
-                if(errorType === 'network' || (errorType === 'response' && (statusCode / 100) === 5)) {
+                if(errorType === 'timeout' || (errorType === 'response' && Math.round(statusCode / 100) === 5)) {
                     next(index + 1);
                 } else {
                     callback(err);
