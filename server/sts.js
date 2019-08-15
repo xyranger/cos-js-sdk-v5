@@ -42,7 +42,7 @@ app.all('/sts', function (req, res, next) {
 
     // TODO 这里根据自己业务需要做好放行判断
     if (config.allowPrefix === '_ALLOW_DIR_/*') {
-        res.send({error: '请修改 allowPrefix 配置项，指定允许上传的路径前缀'});
+        res.send({ error: '请修改 allowPrefix 配置项，指定允许上传的路径前缀' });
         return;
     }
 
@@ -67,6 +67,7 @@ app.all('/sts', function (req, res, next) {
         proxy: config.proxy,
         durationSeconds: config.durationSeconds,
         policy: policy,
+        region: 'ap-guangzhou'
     }, function (err, tempKeys) {
         var result = JSON.stringify(err || tempKeys) || '';
         res.send(result);
@@ -104,6 +105,7 @@ app.all('/sts', function (req, res, next) {
 //         proxy: config.proxy,
 //         durationSeconds: config.durationSeconds,
 //         policy: policy,
+//         region: 'ap-guangzhou',
 //     }, function (err, tempKeys) {
 //         var result = JSON.stringify(err || tempKeys) || '';
 //         res.send(result);
@@ -111,7 +113,7 @@ app.all('/sts', function (req, res, next) {
 // });
 
 app.all('*', function (req, res, next) {
-    res.send({code: -1, message: '404 Not Found'});
+    res.send({ code: -1, message: '404 Not Found' });
 });
 
 // 启动签名服务

@@ -40,7 +40,9 @@ var getAuthorization = function (options, callback) {
         try {
             var data = JSON.parse(e.target.responseText);
             var credentials = data.credentials;
+            if(!credentials) throw {error: data};
         } catch (e) {
+            logger.error(e.error);
         }
         callback({
             TmpSecretId: credentials.tmpSecretId,
@@ -202,10 +204,30 @@ function getBucket() {
     });
 }
 
+function listObjectVersions() {
+    cos.listObjectVersions({
+        Bucket: config.Bucket, // Bucket 格式：test-1250000000
+        Region: config.Region,
+        // Prefix: "",
+        // Delimiter: '/'
+    }, function (err, data) {
+        logger.log(err || JSON.stringify(data, null, '    '));
+    });
+}
+
 function headBucket() {
     cos.headBucket({
         Bucket: config.Bucket, // Bucket 格式：test-1250000000
         Region: config.Region
+    }, function (err, data) {
+        logger.log(err || data);
+    });
+}
+
+function deleteBucket() {
+    cos.deleteBucket({
+        Bucket: config.Bucket,
+        Region: config.Region,
     }, function (err, data) {
         logger.log(err || data);
     });
@@ -512,17 +534,6 @@ function getBucketVersioning() {
     });
 }
 
-function listObjectVersions() {
-    cos.listObjectVersions({
-        Bucket: config.Bucket, // Bucket 格式：test-1250000000
-        Region: config.Region,
-        // Prefix: "",
-        // Delimiter: '/'
-    }, function (err, data) {
-        logger.log(err || JSON.stringify(data, null, '    '));
-    });
-}
-
 function putBucketReplication() {
     var AppId = config.Bucket.substr(config.Bucket.lastIndexOf('-') + 1);
     cos.putBucketReplication({
@@ -563,11 +574,102 @@ function deleteBucketReplication() {
     });
 }
 
-function deleteBucket() {
-    cos.deleteBucket({
-        Bucket: config.Bucket,
+function putBucketWebsite() {
+    cos.putBucketWebsite({
+        Bucket: config.Bucket, // Bucket 格式：test-1250000000
         Region: config.Region,
+        WebsiteConfiguration: {
+            IndexDocument: {
+                Suffix: "index.html"
+            },
+            RedirectAllRequestsTo: {
+                Protocol: "https"
+            },
+            ErrorDocument: {
+                Key: "error.html"
+            },
+            // RoutingRules: [{
+            //     Condition: {
+            //         HttpErrorCodeReturnedEquals: "404"
+            //     },
+            //     Redirect: {
+            //         Protocol: "https",
+            //         ReplaceKeyWith: "404.html"
+            //     }
+            // }, {
+            //     Condition: {
+            //         KeyPrefixEquals: "docs/"
+            //     },
+            //     Redirect: {
+            //         Protocol: "https",
+            //         ReplaceKeyPrefixWith: "documents/"
+            //     }
+            // }, {
+            //     Condition: {
+            //         KeyPrefixEquals: "img/"
+            //     },
+            //     Redirect: {
+            //         Protocol: "https",
+            //         ReplaceKeyWith: "picture.jpg"
+            //     }
+            // }]
+        }
     }, function (err, data) {
+        logger.log(err || data);
+    });
+}
+
+function getBucketWebsite() {
+    cos.getBucketWebsite({
+        Bucket: config.Bucket, // Bucket 格式：test-1250000000
+        Region: config.Region
+    },function(err, data){
+        logger.log(err || data);
+    });
+}
+
+function deleteBucketWebsite() {
+    cos.deleteBucketWebsite({
+        Bucket: config.Bucket, // Bucket 格式：test-1250000000
+        Region: config.Region
+    },function(err, data){
+        logger.log(err || data);
+    });
+}
+
+function putBucketDomain() {
+    cos.putBucketDomain({
+        Bucket: config.Bucket, // Bucket 格式：test-1250000000
+        Region: config.Region,
+        DomainRule:[{
+            Status: "DISABLED",
+            Name: "www.testDomain1.com",
+            Type: "REST"
+        },
+        {
+            Status: "DISABLED",
+            Name: "www.testDomain2.com",
+            Type: "WEBSITE"
+        }]
+    },function(err, data){
+        logger.log(err || data);
+    });
+}
+
+function getBucketDomain() {
+    cos.getBucketDomain({
+        Bucket: config.Bucket, // Bucket 格式：test-1250000000
+        Region: config.Region
+    },function(err, data){
+        logger.log(err || data);
+    });
+}
+
+function deleteBucketDomain() {
+    cos.deleteBucketDomain({
+        Bucket: config.Bucket, // Bucket 格式：test-1250000000
+        Region: config.Region
+    },function(err, data){
         logger.log(err || data);
     });
 }
@@ -901,6 +1003,12 @@ function sliceCopyFile() {
         'putBucketReplication',
         'getBucketReplication',
         'deleteBucketReplication',
+        'putBucketWebsite',
+        'getBucketWebsite',
+        'deleteBucketWebsite',
+        'putBucketDomain',
+        'getBucketDomain',
+        'deleteBucketDomain',
         'deleteBucket',
         'putObject',
         'putObjectCopy',
