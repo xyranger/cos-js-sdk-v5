@@ -1384,7 +1384,7 @@ function listBucketInventory(params, callback) {
             return callback(err);
         }
         var ListInventoryConfigurationResult = data['ListInventoryConfigurationResult'];
-        var InventoryConfigurations = ListInventoryConfigurationResult.InventoryConfiguration;
+        var InventoryConfigurations = ListInventoryConfigurationResult.InventoryConfiguration || [];
         InventoryConfigurations = util.isArray(InventoryConfigurations) ? InventoryConfigurations : [InventoryConfigurations];
         delete ListInventoryConfigurationResult['InventoryConfiguration'];
         util.each(InventoryConfigurations, function (InventoryConfiguration) {
