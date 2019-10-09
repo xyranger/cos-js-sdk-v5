@@ -3,15 +3,17 @@ var bodyParser = require('body-parser');
 var STS = require('qcloud-cos-sts');
 var express = require('express');
 var pathLib = require('path');
+const fs = require('fs')
+const { replaceContent } = require('./utils')
 
 // 配置参数
 var config = {
-    secretId: 'AKIDxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-    secretKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-    proxy: '',
+    secretId: process.env.SecretId,
+    secretKey: process.env.SecretKey,
+    proxy: process.env.Proxy,
     durationSeconds: 1800,
-    bucket: 'test-1250000000',
-    region: 'ap-guangzhou',
+    bucket: process.env.Bucket,
+    region: process.env.Region,
     allowPrefix: '_ALLOW_DIR_/*',
     // 密钥的权限列表
     allowActions: [
@@ -31,6 +33,30 @@ var config = {
 
 // 创建临时密钥服务
 var app = express();
+app.use('/demo/demo.js', (req, res, next) => {
+    let content = fs.readFileSync(pathLib.resolve(__dirname, '../demo/demo.js'))
+    content = replaceContent({
+        content,
+        map: {
+            Bucket: process.env.Bucket,
+            Region: process.env.Region,
+            AccountId: process.env.AccountId
+        }
+    })
+    res.send(content)
+});
+app.use('/test/test.js', (req, res, next) => {
+    let content = fs.readFileSync(pathLib.resolve(__dirname, '../test/test.js'))
+    content = replaceContent({
+        content,
+        map: {
+            Bucket: process.env.Bucket,
+            Region: process.env.Region,
+            AccountId: process.env.AccountId
+        }
+    })
+    res.send(content)
+});
 app.use('/dist/', express.static(pathLib.resolve(__dirname, '../dist')));
 app.use('/demo/', express.static(pathLib.resolve(__dirname, '../demo')));
 app.use('/test/', express.static(pathLib.resolve(__dirname, '../test')));
@@ -65,12 +91,13 @@ app.all('/sts', function (req, res, next) {
         secretId: config.secretId,
         secretKey: config.secretKey,
         proxy: config.proxy,
+        region: config.region,
         durationSeconds: config.durationSeconds,
         policy: policy,
         region: 'ap-guangzhou'
     }, function (err, tempKeys) {
-        var result = JSON.stringify(err || tempKeys) || '';
-        res.send(result);
+        if (tempKeys) tempKeys.startTime = startTime;
+        res.send(err || tempKeys);
     });
 });
 
@@ -107,8 +134,8 @@ app.all('/sts', function (req, res, next) {
 //         policy: policy,
 //         region: 'ap-guangzhou',
 //     }, function (err, tempKeys) {
-//         var result = JSON.stringify(err || tempKeys) || '';
-//         res.send(result);
+//         if (tempKeys) tempKeys.startTime = startTime;
+//         res.send(err || tempKeys);
 //     });
 // });
 
