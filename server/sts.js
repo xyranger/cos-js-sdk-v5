@@ -30,6 +30,10 @@ var config = {
     ],
 };
 
+if (process.env.AllowAll === 'true') {
+    config.allowPrefix = '*'
+    config.allowActions = '*'
+}
 
 // 创建临时密钥服务
 var app = express();

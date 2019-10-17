@@ -753,14 +753,14 @@ function getBucketInventory() {
     });
 }
 
-function listBucketInventory() {
-    cos.listBucketInventory({
-        Bucket: config.Bucket,
-        Region: config.Region
-    }, function (err, data) {
-        logger.log(err || data);
-    });
-}
+// function listBucketInventory() {
+//     cos.listBucketInventory({
+//         Bucket: config.Bucket,
+//         Region: config.Region
+//     }, function (err, data) {
+//         logger.log(err || data);
+//     });
+// }
 
 function deleteBucketInventory() {
     cos.deleteBucketInventory({
@@ -1114,7 +1114,7 @@ function sliceCopyFile() {
         'getBucketLogging',
         'putBucketInventory',
         'getBucketInventory',
-        'listBucketInventory',
+        // 'listBucketInventory',
         'deleteBucketInventory',
         'putObject',
         'putObjectCopy',

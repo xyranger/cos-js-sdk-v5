@@ -5365,7 +5365,7 @@ function listBucketInventory(params, callback) {
             return callback(err);
         }
         var ListInventoryConfigurationResult = data['ListInventoryConfigurationResult'];
-        var InventoryConfigurations = ListInventoryConfigurationResult.InventoryConfiguration;
+        var InventoryConfigurations = ListInventoryConfigurationResult.InventoryConfiguration || [];
         InventoryConfigurations = util.isArray(InventoryConfigurations) ? InventoryConfigurations : [InventoryConfigurations];
         delete ListInventoryConfigurationResult['InventoryConfiguration'];
         util.each(InventoryConfigurations, function (InventoryConfiguration) {
@@ -6984,7 +6984,7 @@ var API_MAP = {
     getBucketLogging: getBucketLogging,
     putBucketInventory: putBucketInventory, // BucketInventory
     getBucketInventory: getBucketInventory,
-    listBucketInventory: listBucketInventory,
+    // listBucketInventory: listBucketInventory,
     deleteBucketInventory: deleteBucketInventory,
 
     // Object 相关方法

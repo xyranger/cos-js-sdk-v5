@@ -2496,22 +2496,22 @@ group('BucketInventory', function () {
         });
     });
 
-    test('listBucketInventory()', function (done, assert) {
-        cos.listBucketInventory({
-            Bucket: config.Bucket,
-            Region: config.Region
-        }, function (err, data) {
-            var targetInventory;
-            data.InventoryConfigurations.forEach(function (item) {
-                if (item.Id === InventoryConfiguration.Id) {
-                    targetInventory = item;
-                }
-            });
-            assert.ok(comparePlainObject(InventoryConfiguration, targetInventory));
-            assert.ok(data.IsTruncated === 'false' || data.IsTruncated === 'true');
-            done();
-        });
-    });
+    // test('listBucketInventory()', function (done, assert) {
+    //     cos.listBucketInventory({
+    //         Bucket: config.Bucket,
+    //         Region: config.Region
+    //     }, function (err, data) {
+    //         var targetInventory;
+    //         data.InventoryConfigurations.forEach(function (item) {
+    //             if (item.Id === InventoryConfiguration.Id) {
+    //                 targetInventory = item;
+    //             }
+    //         });
+    //         assert.ok(comparePlainObject(InventoryConfiguration, targetInventory));
+    //         assert.ok(data.IsTruncated === 'false' || data.IsTruncated === 'true');
+    //         done();
+    //     });
+    // });
 
     test('putBucketInventory() 不设置 SSECOS', function (done, assert) {
         cos.putBucketInventory({
