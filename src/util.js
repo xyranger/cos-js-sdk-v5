@@ -175,7 +175,7 @@ var getFileMd5 = function (blob, callback, onProgress) {
                 md5ctx = md5ctx.update(content, true);
                 loaded += content.length;
                 content = null;
-                if (onProgress) onProgress({loaded: loaded, total: size, percent: Math.round(loaded / size * 10000) / 10000});
+                if (onProgress) onProgress({ loaded: loaded, total: size, percent: Math.round(loaded / size * 10000) / 10000 });
                 next(start + md5ChunkSize);
             });
         });
@@ -373,16 +373,16 @@ var apiWrapper = function (apiName, apiFn) {
             // 判断参数是否完整
             var missingResult;
             if (missingResult = hasMissingParams(apiName, params)) {
-                _callback({error: 'missing param ' + missingResult});
+                _callback({ error: 'missing param ' + missingResult });
                 return;
             }
             // 判断 region 格式
             if (params.Region) {
                 if (params.Region.indexOf('cos.') > -1) {
-                    _callback({error: 'param Region should not be start with "cos."'});
+                    _callback({ error: 'param Region should not be start with "cos."' });
                     return;
                 } else if (!/^([a-z\d-]+)$/.test(params.Region)) {
-                    _callback({error: 'Region format error.'});
+                    _callback({ error: 'Region format error.' });
                     return;
                 }
                 // 判断 region 格式
@@ -398,7 +398,7 @@ var apiWrapper = function (apiName, apiFn) {
                     } else if (this.options.AppId) {
                         params.Bucket = params.Bucket + '-' + this.options.AppId;
                     } else {
-                        _callback({error: 'Bucket should format as "test-1250000000".'});
+                        _callback({ error: 'Bucket should format as "test-1250000000".' });
                         return;
                     }
                 }
@@ -441,7 +441,7 @@ var throttleOnProgress = function (total, onProgress) {
             time0 = time1;
             size0 = size1;
             try {
-                onProgress({loaded: size1, total: total, speed: speed, percent: percent});
+                onProgress({ loaded: size1, total: total, speed: speed, percent: percent });
             } catch (e) {
             }
         }
@@ -465,12 +465,12 @@ var throttleOnProgress = function (total, onProgress) {
 var getFileSize = function (api, params, callback) {
     var size;
     if (typeof params.Body === 'string') {
-        params.Body = new Blob([params.Body], {type: 'text/plain'});
+        params.Body = new Blob([params.Body], { type: 'text/plain' });
     }
-    if ((params.Body && (params.Body instanceof Blob || params.Body.toString() === '[object File]' || params.Body.toString() === '[object Blob]'))) {
+    if (params.Body && params.Body.size) {
         size = params.Body.size;
     } else {
-        callback({error: 'params body format error, Only allow File|Blob|String.'});
+        callback({ error: 'params body format error, Only allow File|Blob|String.' });
         return;
     }
     params.ContentLength = size;
@@ -508,7 +508,7 @@ var util = {
 };
 
 var fileSliceNeedCopy = (function () {
-    var compareVersion = function(a, b) {
+    var compareVersion = function (a, b) {
         a = a.split('.');
         b = b.split('.');
         for (var i = 0; i < b.length; i++) {
